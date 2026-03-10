@@ -73,6 +73,15 @@
             border:1px solid #ddd;
             border-radius:5px;
         }
+        .hop-success{
+        color:#27ae60;
+         font-weight:500;
+        }
+
+        .hop-fail{
+        color:#e74c3c;
+        font-weight:600;
+        }
 
     </style>
 
@@ -142,17 +151,14 @@
 
     <!-- Output Card -->
     <div class="card">
-
-        <h3>Simulation Output</h3>
-
-        <div id="output"></div>
-
+        <h3>Packet Report</h3>
+        <div id="output" class="report-container"></div>
     </div>
 
 </div>
 
-<script src="js/script.js"></script>
 <script src="js/network.js"></script>
+<script src="js/script.js"></script>
 
 </body>
 </html>
