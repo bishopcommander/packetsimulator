@@ -11,25 +11,30 @@ public class Dijkstra {
     }
 
     public List<String> findShortestPath(String source, String destination) {
+        if (!graph.getAdjList().containsKey(source) || !graph.getAdjList().containsKey(destination)) {
+            return new ArrayList<>();
+        }
 
-        Map<String, Integer> dist = new HashMap<>();
+        Map<String, Double> dist = new HashMap<>();
         Map<String, String> prev = new HashMap<>();
 
         PriorityQueue<NodeDistance> pq =
-                new PriorityQueue<>(Comparator.comparingInt(n -> n.distance));
+                new PriorityQueue<>(Comparator.comparingDouble(n -> n.distance));
 
         // Initialize distances
         for (String node : graph.getAdjList().keySet()) {
-            dist.put(node, Integer.MAX_VALUE);
+            dist.put(node, Double.MAX_VALUE);
         }
 
-        dist.put(source, 0);
-        pq.add(new NodeDistance(source, 0));
+        dist.put(source, 0.0);
+        pq.add(new NodeDistance(source, 0.0));
 
         while (!pq.isEmpty()) {
 
             NodeDistance current = pq.poll();
             String currentNode = current.node;
+
+            if (current.distance > dist.get(currentNode)) continue;
 
             // Stop early if destination reached
             if (currentNode.equals(destination)) break;
@@ -37,9 +42,9 @@ public class Dijkstra {
             for (Edge edge : graph.getAdjList().get(currentNode)) {
 
                 String neighbor = edge.getTo();
-                int weight = edge.getWeight();
+                double weight = edge.getWeight();
 
-                int newDist = dist.get(currentNode) + weight;
+                double newDist = dist.get(currentNode) + weight;
 
                 if (newDist < dist.get(neighbor)) {
                     dist.put(neighbor, newDist);
@@ -69,9 +74,9 @@ public class Dijkstra {
     // Helper class for priority queue
     static class NodeDistance {
         String node;
-        int distance;
+        double distance;
 
-        NodeDistance(String node, int distance) {
+        NodeDistance(String node, double distance) {
             this.node = node;
             this.distance = distance;
         }

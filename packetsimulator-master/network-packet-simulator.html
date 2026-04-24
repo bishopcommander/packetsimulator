@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Packet Simulator — Intelligent Routing Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #020817;
+  --deep: #050f2e;
+  --blue: #0ea5e9;
+  --electric: #38bdf8;
+  --purple: #8b5cf6;
+  --violet: #7c3aed;
+  --cyan: #22d3ee;
+  --glow-blue: rgba(14,165,233,0.4);
+  --glow-purple: rgba(139,92,246,0.3);
+  --glass: rgba(255,255,255,0.04);
+  --glass-border: rgba(255,255,255,0.08);
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --bright: #f8fafc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--navy);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* Custom cursor */
+.cursor {
+  width: 12px; height: 12px;
+  background: var(--electric);
+  border-radius: 50%;
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  transition: transform 0.1s;
+  mix-blend-mode: screen;
+}
+.cursor-ring {
+  width: 40px; height: 40px;
+  border: 1px solid rgba(56,189,248,0.4);
+  border-radius: 50%;
+  position: fixed;
+  pointer-events: none;
+  z-index: 9998;
+  transition: all 0.15s ease;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--navy); }
+::-webkit-scrollbar-thumb { background: var(--violet); border-radius: 2px; }
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 1.2rem 4rem;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(2,8,23,0.6);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--glass-border);
+}
+.nav-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800; font-size: 1.1rem;
+  background: linear-gradient(135deg, var(--electric), var(--purple));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  letter-spacing: -0.02em;
+}
+.nav-links { display: flex; gap: 2.5rem; list-style: none; }
+.nav-links a {
+  font-size: 0.85rem; color: var(--muted); text-decoration: none;
+  font-family: 'Space Mono', monospace;
+  transition: color 0.2s;
+  letter-spacing: 0.05em;
+}
+.nav-links a:hover { color: var(--electric); }
+.nav-cta {
+  background: linear-gradient(135deg, var(--violet), var(--blue));
+  color: white; border: none; padding: 0.6rem 1.4rem;
+  border-radius: 100px; font-size: 0.82rem; cursor: pointer;
+  font-family: 'Space Mono', monospace;
+  transition: all 0.3s;
+  box-shadow: 0 0 20px rgba(139,92,246,0.4);
+}
+.nav-cta:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(139,92,246,0.6); }
+
+/* HERO */
+#hero {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 8rem 4rem 4rem;
+}
+
+.hero-bg {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(139,92,246,0.15) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(14,165,233,0.1) 0%, transparent 60%),
+              radial-gradient(ellipse 40% 30% at 10% 60%, rgba(34,211,238,0.08) 0%, transparent 60%);
+}
+
+/* Canvas for particle network */
+#networkCanvas {
+  position: absolute; inset: 0;
+  opacity: 0.7;
+}
+
+.hero-content {
+  position: relative; z-index: 2;
+  text-align: center;
+  max-width: 900px;
+}
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: rgba(139,92,246,0.12);
+  border: 1px solid rgba(139,92,246,0.3);
+  border-radius: 100px;
+  padding: 0.4rem 1rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem; color: var(--purple);
+  letter-spacing: 0.1em;
+  margin-bottom: 2rem;
+  animation: fadeInUp 0.8s ease both;
+}
+.badge-dot {
+  width: 6px; height: 6px;
+  background: var(--purple); border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.5); }
+}
+
+h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -0.04em;
+  color: var(--bright);
+  animation: fadeInUp 0.8s 0.1s ease both;
+}
+h1 .gradient-text {
+  background: linear-gradient(135deg, var(--electric) 0%, var(--purple) 50%, var(--cyan) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-size: 200% 200%;
+  animation: gradientShift 4s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.hero-subtitle {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(1rem, 2vw, 1.3rem);
+  color: var(--muted);
+  margin: 1.5rem auto;
+  max-width: 600px;
+  line-height: 1.6;
+  animation: fadeInUp 0.8s 0.2s ease both;
+}
+
+.hero-desc {
+  font-size: 0.95rem; color: rgba(100,116,139,0.8);
+  max-width: 500px; margin: 0 auto 2.5rem;
+  line-height: 1.7;
+  animation: fadeInUp 0.8s 0.3s ease both;
+}
+
+.hero-buttons {
+  display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+  animation: fadeInUp 0.8s 0.4s ease both;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--violet), var(--blue));
+  color: white; border: none;
+  padding: 0.9rem 2.2rem;
+  border-radius: 100px;
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  position: relative; overflow: hidden;
+  transition: all 0.3s;
+  box-shadow: 0 0 40px rgba(124,58,237,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.btn-primary::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+  opacity: 0; transition: opacity 0.3s;
+}
+.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 0 60px rgba(124,58,237,0.7), inset 0 1px 0 rgba(255,255,255,0.1); }
+.btn-primary:hover::before { opacity: 1; }
+
+.btn-ghost {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  padding: 0.9rem 2.2rem;
+  border-radius: 100px;
+  font-family: 'Syne', sans-serif; font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s;
+}
+.btn-ghost:hover {
+  border-color: rgba(14,165,233,0.4);
+  background: rgba(14,165,233,0.06);
+  transform: translateY(-3px);
+  box-shadow: 0 0 30px rgba(14,165,233,0.2);
+}
+
+/* Floating network visualization */
+.hero-visual {
+  position: absolute;
+  bottom: -5%; left: 50%;
+  transform: translateX(-50%);
+  width: 100%; max-width: 1200px;
+  height: 300px;
+  z-index: 1;
+}
+
+/* STATS BAR */
+.stats-bar {
+  position: relative; z-index: 2;
+  display: flex; justify-content: center; gap: 4rem; flex-wrap: wrap;
+  padding: 2.5rem 4rem;
+  background: rgba(255,255,255,0.02);
+  border-top: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--glass-border);
+  animation: fadeInUp 0.8s 0.6s ease both;
+}
+.stat-item { text-align: center; }
+.stat-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 2rem; font-weight: 800;
+  background: linear-gradient(135deg, var(--electric), var(--purple));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.stat-label { font-size: 0.78rem; color: var(--muted); font-family: 'Space Mono', monospace; letter-spacing: 0.08em; }
+
+/* SECTION STYLES */
+section { padding: 6rem 4rem; }
+
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem; letter-spacing: 0.2em;
+  color: var(--electric); text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800; letter-spacing: -0.03em;
+  color: var(--bright); line-height: 1.1;
+  margin-bottom: 1.5rem;
+}
+.section-title .accent { color: var(--electric); }
+
+/* FEATURES */
+#features { background: var(--deep); }
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem; margin-top: 3rem;
+}
+
+.feature-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 2rem;
+  position: relative; overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: default;
+}
+.feature-card::before {
+  content: ''; position: absolute;
+  inset: 0; border-radius: 20px;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(139,92,246,0.12), transparent 60%);
+  opacity: 0; transition: opacity 0.3s;
+}
+.feature-card:hover { transform: translateY(-8px) scale(1.01); border-color: rgba(14,165,233,0.3); }
+.feature-card:hover::before { opacity: 1; }
+
+.feature-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+.feature-icon.blue { background: rgba(14,165,233,0.15); box-shadow: 0 0 20px rgba(14,165,233,0.2); }
+.feature-icon.purple { background: rgba(139,92,246,0.15); box-shadow: 0 0 20px rgba(139,92,246,0.2); }
+.feature-icon.cyan { background: rgba(34,211,238,0.15); box-shadow: 0 0 20px rgba(34,211,238,0.2); }
+
+.feature-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.1rem; font-weight: 700; color: var(--bright);
+  margin-bottom: 0.6rem;
+}
+.feature-desc { font-size: 0.88rem; color: var(--muted); line-height: 1.65; }
+
+/* HOW IT WORKS - horizontal scroll */
+#how-it-works { overflow: hidden; padding-bottom: 0; }
+.steps-track {
+  display: flex; gap: 2rem;
+  padding: 3rem 4rem 4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  cursor: grab;
+}
+.steps-track:active { cursor: grabbing; }
+.steps-track::-webkit-scrollbar { display: none; }
+
+.step-card {
+  min-width: 280px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 2rem 1.8rem;
+  position: relative;
+  transition: all 0.4s;
+  flex-shrink: 0;
+}
+.step-card:hover {
+  border-color: rgba(14,165,233,0.4);
+  transform: translateY(-6px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 40px rgba(14,165,233,0.1);
+}
+
+.step-num {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem; color: var(--electric);
+  letter-spacing: 0.15em; margin-bottom: 1rem;
+}
+.step-visual {
+  height: 120px; border-radius: 16px;
+  background: rgba(14,165,233,0.06);
+  border: 1px solid rgba(14,165,233,0.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  position: relative;
+}
+.step-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.05rem; font-weight: 700; color: var(--bright);
+  margin-bottom: 0.5rem;
+}
+.step-desc { font-size: 0.84rem; color: var(--muted); line-height: 1.6; }
+
+/* WHY SECTION */
+#why {
+  background: linear-gradient(135deg, var(--deep) 0%, var(--navy) 100%);
+  position: relative;
+}
+#why::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% 100%, rgba(124,58,237,0.1), transparent);
+}
+.why-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 4rem; margin-top: 3rem;
+  position: relative;
+}
+.why-text h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.6rem; font-weight: 700; color: var(--bright);
+  margin-bottom: 1.5rem;
+}
+.why-points { display: flex; flex-direction: column; gap: 1.2rem; }
+.why-point {
+  display: flex; gap: 1rem; align-items: flex-start;
+  padding: 1.2rem;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  transition: all 0.3s;
+}
+.why-point:hover {
+  border-color: rgba(14,165,233,0.3);
+  transform: translateX(8px);
+}
+.why-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--electric); flex-shrink: 0; margin-top: 0.4rem;
+  box-shadow: 0 0 10px var(--glow-blue);
+}
+.why-point-text { font-size: 0.9rem; color: var(--text); line-height: 1.6; }
+.why-point-title { font-weight: 600; color: var(--bright); margin-bottom: 0.2rem; }
+
+.use-cases {
+  display: grid; gap: 1rem;
+}
+.use-case {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all 0.4s;
+  border-left: 3px solid transparent;
+}
+.use-case:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+.use-case.education { border-left-color: var(--electric); }
+.use-case.research { border-left-color: var(--purple); }
+.use-case.routing { border-left-color: var(--cyan); }
+.use-case.systems { border-left-color: #f472b6; }
+.use-case-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.95rem; font-weight: 700; color: var(--bright);
+  margin-bottom: 0.5rem;
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.use-case-desc { font-size: 0.83rem; color: var(--muted); line-height: 1.6; }
+
+/* HIGHLIGHTS */
+#highlights { background: var(--navy); }
+.highlights-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-top: 3rem;
+  border-radius: 24px; overflow: hidden;
+  border: 1px solid var(--glass-border);
+}
+.highlight-cell {
+  background: var(--glass);
+  padding: 2.5rem 2rem;
+  transition: all 0.4s;
+  position: relative; overflow: hidden;
+}
+.highlight-cell:hover {
+  background: rgba(255,255,255,0.06);
+}
+.highlight-cell::after {
+  content: attr(data-index);
+  position: absolute; bottom: 1rem; right: 1.5rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 3rem; font-weight: 700;
+  color: rgba(255,255,255,0.03);
+  line-height: 1;
+}
+.highlight-icon { font-size: 1.8rem; margin-bottom: 1rem; }
+.highlight-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.1rem; font-weight: 700; color: var(--bright);
+  margin-bottom: 0.6rem;
+}
+.highlight-desc { font-size: 0.84rem; color: var(--muted); line-height: 1.6; }
+.highlight-tag {
+  display: inline-block; margin-top: 1rem;
+  background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3);
+  color: var(--purple); border-radius: 100px;
+  padding: 0.2rem 0.8rem; font-size: 0.7rem;
+  font-family: 'Space Mono', monospace; letter-spacing: 0.05em;
+}
+.highlight-tag.future {
+  background: rgba(34,211,238,0.1); border-color: rgba(34,211,238,0.3);
+  color: var(--cyan);
+}
+
+/* TEAM */
+#team { background: var(--deep); }
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem; margin-top: 3rem;
+}
+.team-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative; overflow: hidden;
+}
+.team-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--violet), var(--blue), var(--cyan));
+  opacity: 0; transition: opacity 0.3s;
+}
+.team-card:hover { transform: translateY(-10px); box-shadow: 0 30px 60px rgba(0,0,0,0.5); }
+.team-card:hover::before { opacity: 1; }
+
+.avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%; margin: 0 auto 1.2rem;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800;
+  position: relative;
+}
+.avatar::after {
+  content: ''; position: absolute; inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--violet), var(--blue), var(--cyan));
+  z-index: -1;
+}
+.avatar.a1 { background: rgba(124,58,237,0.3); color: var(--purple); }
+.avatar.a2 { background: rgba(14,165,233,0.3); color: var(--electric); }
+.avatar.a3 { background: rgba(34,211,238,0.3); color: var(--cyan); }
+.avatar.mentor { background: rgba(244,114,182,0.2); color: #f472b6; }
+
+.team-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.1rem; font-weight: 700; color: var(--bright);
+  margin-bottom: 0.3rem;
+}
+.team-role { font-size: 0.8rem; color: var(--electric); font-family: 'Space Mono', monospace; margin-bottom: 0.8rem; }
+.team-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+
+/* FINAL CTA */
+#cta {
+  min-height: 70vh;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  position: relative; overflow: hidden;
+  padding: 8rem 4rem;
+}
+.cta-bg {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(124,58,237,0.2) 0%, transparent 70%),
+              radial-gradient(ellipse 50% 40% at 80% 20%, rgba(14,165,233,0.12) 0%, transparent 60%);
+}
+#ctaCanvas { position: absolute; inset: 0; }
+.cta-content { position: relative; z-index: 2; }
+.cta-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem; letter-spacing: 0.25em;
+  color: var(--electric); text-transform: uppercase; margin-bottom: 1.5rem;
+}
+.cta-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 800; letter-spacing: -0.04em;
+  color: var(--bright); line-height: 1.05; margin-bottom: 1.5rem;
+}
+.cta-sub { font-size: 1rem; color: var(--muted); margin-bottom: 3rem; max-width: 500px; }
+
+.btn-launch {
+  background: linear-gradient(135deg, var(--violet) 0%, var(--blue) 100%);
+  color: white; border: none;
+  padding: 1.1rem 3rem;
+  border-radius: 100px;
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 1.05rem;
+  cursor: pointer;
+  position: relative; overflow: hidden;
+  transition: all 0.4s;
+  box-shadow: 0 0 60px rgba(124,58,237,0.6), 0 0 120px rgba(14,165,233,0.2), inset 0 1px 0 rgba(255,255,255,0.15);
+  letter-spacing: -0.01em;
+}
+.btn-launch:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 0 80px rgba(124,58,237,0.8), 0 0 160px rgba(14,165,233,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.btn-launch::after {
+  content: ''; position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 0; height: 0;
+  background: rgba(255,255,255,0.1);
+  border-radius: 50%;
+  transition: width 0.6s, height 0.6s;
+}
+.btn-launch:active::after { width: 300px; height: 300px; }
+
+/* FOOTER */
+footer {
+  padding: 2rem 4rem;
+  border-top: 1px solid var(--glass-border);
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(2,8,23,0.8);
+}
+.footer-logo {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  background: linear-gradient(135deg, var(--electric), var(--purple));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.footer-copy { font-size: 0.78rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+/* ANIMATIONS */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes nodeGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(14,165,233,0.4); }
+  50% { box-shadow: 0 0 30px rgba(14,165,233,0.8), 0 0 60px rgba(14,165,233,0.3); }
+}
+
+.reveal {
+  opacity: 0; transform: translateY(40px);
+  transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* Step visual SVG animations */
+.node-pulse { animation: pulse 2s infinite; }
+.packet-move { animation: packetTravel 3s infinite; }
+
+@keyframes packetTravel {
+  0% { transform: translate(0, 0); opacity: 1; }
+  100% { transform: translate(100px, 20px); opacity: 0; }
+}
+
+/* Scroll indicator */
+.scroll-indicator {
+  position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  animation: fadeInUp 1s 1s ease both;
+  z-index: 10;
+}
+.scroll-line {
+  width: 1px; height: 60px;
+  background: linear-gradient(to bottom, transparent, var(--electric));
+  animation: scrollLine 2s ease infinite;
+}
+@keyframes scrollLine {
+  0% { transform: scaleY(0); transform-origin: top; }
+  50% { transform: scaleY(1); transform-origin: top; }
+  51% { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+.scroll-text {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem; letter-spacing: 0.2em;
+  color: var(--muted); text-transform: uppercase;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  nav { padding: 1rem 1.5rem; }
+  .nav-links { display: none; }
+  section { padding: 4rem 1.5rem; }
+  .why-grid { grid-template-columns: 1fr; }
+  .highlights-grid { grid-template-columns: 1fr 1fr; }
+  footer { flex-direction: column; gap: 1rem; text-align: center; }
+  #hero { padding: 7rem 1.5rem 4rem; }
+  .stats-bar { gap: 2rem; padding: 2rem 1.5rem; }
+}
+
+/* Grid lines bg */
+.grid-bg {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(14,165,233,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14,165,233,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Glowing orbs */
+.orb {
+  position: absolute; border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+/* Section divider */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+}
+
+/* Progress indicator */
+.progress-bar {
+  position: fixed; top: 0; left: 0; height: 2px;
+  background: linear-gradient(90deg, var(--violet), var(--electric), var(--cyan));
+  z-index: 200;
+  transition: width 0.1s;
+  box-shadow: 0 0 10px rgba(14,165,233,0.5);
+}
+
+/* Chip */
+.chip {
+  display: inline-block;
+  background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.2);
+  color: var(--electric); border-radius: 100px;
+  padding: 0.2rem 0.7rem; font-size: 0.7rem;
+  font-family: 'Space Mono', monospace; letter-spacing: 0.05em;
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">⬡ NPS</div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how-it-works">How It Works</a></li>
+    <li><a href="#why">Why</a></li>
+    <li><a href="#highlights">Highlights</a></li>
+    <li><a href="#team">Team</a></li>
+  </ul>
+  <button class="nav-cta">Launch Simulator →</button>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div class="grid-bg"></div>
+  <canvas id="networkCanvas"></canvas>
+
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      INTELLIGENT ROUTING PLATFORM v2.0
+    </div>
+
+    <h1>
+      <span class="gradient-text">Network Packet</span><br>
+      Simulator
+    </h1>
+
+    <p class="hero-subtitle">
+      Visualize, Analyze, and Simulate Intelligent<br>
+      Packet Routing in Modern Networks
+    </p>
+
+    <p class="hero-desc">
+      Build, test, and optimize packet flow using real-time routing simulation,
+      graph algorithms, weighted networks, and performance metrics.
+    </p>
+
+    <div class="hero-buttons">
+      <button class="btn-primary">⚡ Try Simulation Now</button>
+      <button class="btn-ghost">Explore Features →</button>
+    </div>
+  </div>
+
+  <div class="scroll-indicator">
+    <div class="scroll-line"></div>
+    <span class="scroll-text">Scroll</span>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar reveal">
+  <div class="stat-item">
+    <div class="stat-num">6+</div>
+    <div class="stat-label">Routing Algorithms</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">∞</div>
+    <div class="stat-label">Network Topologies</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">Real-Time</div>
+    <div class="stat-label">Packet Visualization</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">100%</div>
+    <div class="stat-label">Graph-Based Engine</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-label">02 — Core Capabilities</div>
+  <div class="section-title">What We <span class="accent">Provide</span></div>
+  <p style="color:var(--muted); font-size:0.95rem; max-width:520px; line-height:1.7;">Everything you need to simulate, understand, and optimize intelligent packet routing in complex networks.</p>
+
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <div class="feature-icon blue">🖱️</div>
+      <div class="feature-title">Drag & Drop Router Creation</div>
+      <p class="feature-desc">Intuitively place, move, and configure routers on an infinite canvas. Build any network topology you can imagine without writing a single line of code.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon purple">🔗</div>
+      <div class="feature-title">Smart Node Connection</div>
+      <p class="feature-desc">Draw connections between routers with automatic topology detection. Build star, ring, mesh, and hybrid network structures visually in seconds.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon cyan">⚖️</div>
+      <div class="feature-title">BFS vs Dijkstra Routing</div>
+      <p class="feature-desc">Side-by-side comparison of Breadth-First Search and Dijkstra's shortest path algorithms. Watch how each algorithm traverses your network in real time.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon blue">📊</div>
+      <div class="feature-title">Weighted Edge Simulation</div>
+      <p class="feature-desc">Assign delay costs, bandwidth limits, and congestion weights to every link. Simulate realistic network conditions with custom edge parameters.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon purple">📈</div>
+      <div class="feature-title">Metrics Dashboard</div>
+      <p class="feature-desc">Track hops, total delay, congestion levels, and packet drops in a real-time analytics dashboard. Export logs and performance data instantly.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon cyan">🎬</div>
+      <div class="feature-title">Real-Time Packet Flow</div>
+      <p class="feature-desc">Watch packets move step-by-step along routing paths with smooth animation. Pause, replay, and step through routing decisions at your own pace.</p>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <div class="section-label">03 — Workflow</div>
+  <div class="section-title">How It <span class="accent">Works</span></div>
+  <p style="color:var(--muted); font-size:0.95rem; margin-bottom:1rem; max-width:500px; line-height:1.7;">Six seamless steps from network creation to full simulation analysis.</p>
+  <p style="color:var(--muted); font-size:0.78rem; font-family:'Space Mono',monospace; letter-spacing:0.08em;">← DRAG TO EXPLORE →</p>
+
+  <div class="steps-track" id="stepsTrack">
+    <div class="step-card">
+      <div class="step-num">STEP 01</div>
+      <div class="step-visual">
+        <svg width="140" height="100" viewBox="0 0 140 100">
+          <circle cx="50" cy="50" r="18" fill="rgba(14,165,233,0.15)" stroke="#0ea5e9" stroke-width="1.5"/>
+          <circle cx="50" cy="50" r="18" fill="none" stroke="rgba(14,165,233,0.3)" stroke-width="8" class="node-pulse"/>
+          <text x="50" y="54" text-anchor="middle" fill="#0ea5e9" font-size="10" font-family="Space Mono">R1</text>
+          <circle cx="100" cy="30" r="12" fill="rgba(139,92,246,0.15)" stroke="#8b5cf6" stroke-width="1.5"/>
+          <text x="100" y="34" text-anchor="middle" fill="#8b5cf6" font-size="8" font-family="Space Mono">R2</text>
+          <circle cx="90" cy="75" r="10" fill="rgba(34,211,238,0.15)" stroke="#22d3ee" stroke-width="1.5"/>
+          <text x="90" y="79" text-anchor="middle" fill="#22d3ee" font-size="7" font-family="Space Mono">R3</text>
+          <text x="18" y="20" fill="#38bdf8" font-size="18" opacity="0.6">+</text>
+        </svg>
+      </div>
+      <div class="step-title">Create Nodes</div>
+      <p class="step-desc">Add router nodes to the simulation canvas. Each node represents a network device in your custom topology.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">STEP 02</div>
+      <div class="step-visual">
+        <svg width="140" height="100" viewBox="0 0 140 100">
+          <line x1="35" y1="50" x2="105" y2="50" stroke="url(#lineGrad)" stroke-width="2" stroke-dasharray="6 3"/>
+          <line x1="60" y1="50" x2="100" y2="25" stroke="rgba(139,92,246,0.5)" stroke-width="1.5" stroke-dasharray="4 2"/>
+          <line x1="60" y1="50" x2="100" y2="75" stroke="rgba(34,211,238,0.5)" stroke-width="1.5" stroke-dasharray="4 2"/>
+          <defs><linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs>
+          <circle cx="35" cy="50" r="12" fill="rgba(14,165,233,0.2)" stroke="#0ea5e9" stroke-width="1.5"/>
+          <circle cx="105" cy="50" r="12" fill="rgba(14,165,233,0.2)" stroke="#0ea5e9" stroke-width="1.5"/>
+          <circle cx="60" cy="50" r="10" fill="rgba(139,92,246,0.2)" stroke="#8b5cf6" stroke-width="1.5"/>
+          <circle cx="100" cy="25" r="8" fill="rgba(34,211,238,0.2)" stroke="#22d3ee" stroke-width="1.5"/>
+          <circle cx="100" cy="75" r="8" fill="rgba(34,211,238,0.2)" stroke="#22d3ee" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="step-title">Connect Routers</div>
+      <p class="step-desc">Draw edges between routers to define the network structure. Create any topology from simple chains to complex mesh networks.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">STEP 03</div>
+      <div class="step-visual">
+        <svg width="140" height="100" viewBox="0 0 140 100">
+          <line x1="30" y1="50" x2="110" y2="50" stroke="rgba(14,165,233,0.4)" stroke-width="2"/>
+          <line x1="50" y1="50" x2="90" y2="25" stroke="rgba(139,92,246,0.4)" stroke-width="2"/>
+          <rect x="60" y="40" width="20" height="10" rx="5" fill="rgba(14,165,233,0.2)" stroke="#38bdf8" stroke-width="1"/>
+          <text x="70" y="48" text-anchor="middle" fill="#38bdf8" font-size="7" font-family="Space Mono">12</text>
+          <rect x="55" y="28" width="16" height="9" rx="4" fill="rgba(139,92,246,0.2)" stroke="#8b5cf6" stroke-width="1"/>
+          <text x="63" y="35" text-anchor="middle" fill="#8b5cf6" font-size="7" font-family="Space Mono">5</text>
+          <circle cx="30" cy="50" r="10" fill="rgba(14,165,233,0.2)" stroke="#0ea5e9" stroke-width="1.5"/>
+          <circle cx="110" cy="50" r="10" fill="rgba(14,165,233,0.2)" stroke="#0ea5e9" stroke-width="1.5"/>
+          <circle cx="50" cy="50" r="8" fill="rgba(139,92,246,0.2)" stroke="#8b5cf6" stroke-width="1.5"/>
+          <circle cx="90" cy="25" r="8" fill="rgba(34,211,238,0.2)" stroke="#22d3ee" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="step-title">Assign Edge Weights</div>
+      <p class="step-desc">Set delay costs and bandwidth on each link. Weighted edges simulate real-world routing decisions based on network conditions.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">STEP 04</div>
+      <div class="step-visual">
+        <svg width="140" height="100" viewBox="0 0 140 100">
+          <rect x="25" y="30" width="40" height="40" rx="10" fill="rgba(14,165,233,0.1)" stroke="#0ea5e9" stroke-width="1.5"/>
+          <text x="45" y="53" text-anchor="middle" fill="#0ea5e9" font-size="9" font-family="Space Mono" font-weight="bold">BFS</text>
+          <rect x="75" y="30" width="40" height="40" rx="10" fill="rgba(139,92,246,0.15)" stroke="#8b5cf6" stroke-width="1.5"/>
+          <text x="95" y="53" text-anchor="middle" fill="#8b5cf6" font-size="7" font-family="Space Mono" font-weight="bold">DIJKSTRA</text>
+          <text x="70" y="20" text-anchor="middle" fill="#64748b" font-size="10">⚡</text>
+          <path d="M 65 50 L 75 50" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="3 2"/>
+        </svg>
+      </div>
+      <div class="step-title">Choose Algorithm</div>
+      <p class="step-desc">Select BFS for unweighted shortest paths or Dijkstra for optimal cost-based routing. Switch between algorithms and compare results.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">STEP 05</div>
+      <div class="step-visual">
+        <svg width="140" height="100" viewBox="0 0 140 100">
+          <line x1="25" y1="50" x2="115" y2="50" stroke="rgba(14,165,233,0.3)" stroke-width="2"/>
+          <circle cx="25" cy="50" r="10" fill="rgba(14,165,233,0.3)" stroke="#0ea5e9" stroke-width="2"/>
+          <circle cx="60" cy="50" r="8" fill="rgba(139,92,246,0.3)" stroke="#8b5cf6" stroke-width="2"/>
+          <circle cx="95" cy="50" r="8" fill="rgba(34,211,238,0.3)" stroke="#22d3ee" stroke-width="2"/>
+          <circle cx="115" cy="50" r="10" fill="rgba(14,165,233,0.3)" stroke="#0ea5e9" stroke-width="2"/>
+          <rect x="38" y="43" width="12" height="8" rx="4" fill="#38bdf8" opacity="0.9">
+            <animate attributeName="cx" values="0;55;0" dur="3s" repeatCount="indefinite"/>
+            <animateTransform attributeName="transform" type="translate" values="0,0;35,0;0,0" dur="3s" repeatCount="indefinite"/>
+          </rect>
+          <text x="70" y="80" text-anchor="middle" fill="#22d3ee" font-size="8" font-family="Space Mono">SIMULATING...</text>
+        </svg>
+      </div>
+      <div class="step-title">Run Simulation</div>
+      <p class="step-desc">Launch the packet simulation and watch data travel through your network step-by-step. Control playback speed and follow each routing decision.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">STEP 06</div>
+      <div class="step-visual">
+        <svg width="140" height="100" viewBox="0 0 140 100">
+          <rect x="15" y="60" width="16" height="25" rx="3" fill="rgba(14,165,233,0.6)" stroke="#0ea5e9" stroke-width="1"/>
+          <rect x="38" y="45" width="16" height="40" rx="3" fill="rgba(139,92,246,0.6)" stroke="#8b5cf6" stroke-width="1"/>
+          <rect x="61" y="35" width="16" height="50" rx="3" fill="rgba(34,211,238,0.6)" stroke="#22d3ee" stroke-width="1"/>
+          <rect x="84" y="50" width="16" height="35" rx="3" fill="rgba(244,114,182,0.6)" stroke="#f472b6" stroke-width="1"/>
+          <rect x="107" y="40" width="16" height="45" rx="3" fill="rgba(14,165,233,0.4)" stroke="#0ea5e9" stroke-width="1"/>
+          <line x1="10" y1="87" x2="130" y2="87" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="23" y="96" text-anchor="middle" fill="#64748b" font-size="6" font-family="Space Mono">HOP</text>
+          <text x="46" y="96" text-anchor="middle" fill="#64748b" font-size="6" font-family="Space Mono">DLY</text>
+          <text x="69" y="96" text-anchor="middle" fill="#64748b" font-size="6" font-family="Space Mono">PKT</text>
+          <text x="92" y="96" text-anchor="middle" fill="#64748b" font-size="6" font-family="Space Mono">CGS</text>
+          <text x="115" y="96" text-anchor="middle" fill="#64748b" font-size="6" font-family="Space Mono">DRP</text>
+        </svg>
+      </div>
+      <div class="step-title">Analyze Metrics</div>
+      <p class="step-desc">Review comprehensive performance data: hop counts, total delay, congestion maps, and drop rates. Export logs for further analysis.</p>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- WHY -->
+<section id="why">
+  <div class="orb" style="width:400px;height:400px;top:-100px;right:-100px;background:rgba(124,58,237,0.08);"></div>
+  <div class="section-label">04 — The Problem We Solve</div>
+  <div class="section-title">Why This <span class="accent">Project</span></div>
+
+  <div class="why-grid">
+    <div class="why-text">
+      <h3>Networking is hard to<br>understand without visuals.</h3>
+      <div class="why-points">
+        <div class="why-point reveal">
+          <div class="why-dot"></div>
+          <div>
+            <div class="why-point-title">Abstract Theory Gap</div>
+            <div class="why-point-text">Most networking courses teach routing algorithms as abstract graph theory with no interactive component. Students struggle to connect formulas to real network behavior.</div>
+          </div>
+        </div>
+        <div class="why-point reveal">
+          <div class="why-dot"></div>
+          <div>
+            <div class="why-point-title">No Hands-On Simulation Tools</div>
+            <div class="why-point-text">Existing tools like GNS3 and Packet Tracer are complex, heavy, and designed for professionals — not for learning foundational routing concepts.</div>
+          </div>
+        </div>
+        <div class="why-point reveal">
+          <div class="why-dot"></div>
+          <div>
+            <div class="why-point-title">Algorithm Comparison is Missing</div>
+            <div class="why-point-text">Students never see BFS vs Dijkstra on the same topology side-by-side. Our simulator makes algorithm trade-offs visually obvious and instantly understandable.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="use-cases">
+      <div class="use-case education reveal">
+        <div class="use-case-title">🎓 Education <span class="chip">PRIMARY USE</span></div>
+        <div class="use-case-desc">Perfect for CS and networking students learning graph algorithms, routing protocols, and packet flow. Turns abstract theory into interactive, visual experience.</div>
+      </div>
+      <div class="use-case research reveal">
+        <div class="use-case-title">🔬 Research</div>
+        <div class="use-case-desc">Researchers can prototype new routing heuristics, test topology efficiency, and model congestion scenarios without building physical lab infrastructure.</div>
+      </div>
+      <div class="use-case routing reveal">
+        <div class="use-case-title">🔧 Routing Optimization</div>
+        <div class="use-case-desc">Compare how BFS and weighted Dijkstra perform under different edge conditions. Identify bottlenecks, suboptimal paths, and congestion hotspots quickly.</div>
+      </div>
+      <div class="use-case systems reveal">
+        <div class="use-case-title">⚙️ System Design Understanding</div>
+        <div class="use-case-desc">Helps software engineers grasp low-level network behavior for system design interviews, infrastructure planning, and backend architecture decisions.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HIGHLIGHTS -->
+<section id="highlights">
+  <div class="section-label">05 — Technical Depth</div>
+  <div class="section-title">Project <span class="accent">Highlights</span></div>
+
+  <div class="highlights-grid">
+    <div class="highlight-cell reveal" data-index="01">
+      <div class="highlight-icon">🕸️</div>
+      <div class="highlight-title">Interactive Graph Engine</div>
+      <p class="highlight-desc">A fully event-driven graph data structure powering unlimited node/edge configurations, adjacency list management, and real-time topology updates.</p>
+      <span class="highlight-tag">Core Architecture</span>
+    </div>
+    <div class="highlight-cell reveal" data-index="02">
+      <div class="highlight-icon">⚡</div>
+      <div class="highlight-title">Event-Driven Simulation</div>
+      <p class="highlight-desc">Packet routing events are queued and dispatched step-by-step, allowing granular control over simulation playback and state inspection at every hop.</p>
+      <span class="highlight-tag">Simulation Engine</span>
+    </div>
+    <div class="highlight-cell reveal" data-index="03">
+      <div class="highlight-icon">🧭</div>
+      <div class="highlight-title">Routing Optimization</div>
+      <p class="highlight-desc">Dijkstra's algorithm finds globally optimal weighted paths while BFS discovers minimum-hop routes. Both are visualized with animated path highlighting.</p>
+      <span class="highlight-tag">Algorithms</span>
+    </div>
+    <div class="highlight-cell reveal" data-index="04">
+      <div class="highlight-icon">📉</div>
+      <div class="highlight-title">Performance Analysis</div>
+      <p class="highlight-desc">Detailed per-simulation metrics: total delay, hop count, path efficiency score, and comparative analytics between algorithm runs on identical topologies.</p>
+      <span class="highlight-tag">Analytics</span>
+    </div>
+    <div class="highlight-cell reveal" data-index="05">
+      <div class="highlight-icon">🌊</div>
+      <div class="highlight-title">Congestion Modeling</div>
+      <p class="highlight-desc">Simulate network congestion with edge capacity limits. Watch packets queue, reroute, or drop as traffic exceeds modeled bandwidth thresholds in real time.</p>
+      <span class="highlight-tag">Network Behavior</span>
+    </div>
+    <div class="highlight-cell reveal" data-index="06">
+      <div class="highlight-icon">🤖</div>
+      <div class="highlight-title">Future: AI-Based Routing</div>
+      <p class="highlight-desc">Planned integration of reinforcement learning agents that adaptively route packets based on dynamic traffic patterns — no predefined routing tables needed.</p>
+      <span class="highlight-tag future">Roadmap</span>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- TEAM -->
+<section id="team">
+  <div class="section-label">06 — The Builders</div>
+  <div class="section-title">Team & <span class="accent">Credentials</span></div>
+  <p style="color:var(--muted); font-size:0.9rem; max-width:500px; line-height:1.7;">Built by a focused team of engineers passionate about networking, systems design, and simulation.</p>
+
+  <div class="team-grid" style="margin-top:3rem;">
+    <div class="team-card reveal">
+      <div class="avatar a1">YN</div>
+      <div class="team-name">Your Name</div>
+      <div class="team-role">Lead Developer</div>
+      <p class="team-desc">Simulation Engine · System Design · Graph Algorithms · Frontend Architecture</p>
+    </div>
+    <div class="team-card reveal">
+      <div class="avatar a2">T1</div>
+      <div class="team-name">Teammate One</div>
+      <div class="team-role">Backend & Algorithms</div>
+      <p class="team-desc">Routing Logic · BFS/Dijkstra Implementation · Data Structures · Performance Optimization</p>
+    </div>
+    <div class="team-card reveal">
+      <div class="avatar a3">T2</div>
+      <div class="team-name">Teammate Two</div>
+      <div class="team-role">UI/UX & Visualization</div>
+      <p class="team-desc">Frontend Development · Packet Animation · Metrics Dashboard · Network Canvas</p>
+    </div>
+    <div class="team-card reveal">
+      <div class="avatar mentor">MG</div>
+      <div class="team-name">Prof. Mentor Guide</div>
+      <div class="team-role">Project Mentor</div>
+      <p class="team-desc">Academic Supervision · Technical Guidance · Research Direction · Project Review</p>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section id="cta">
+  <div class="cta-bg"></div>
+  <canvas id="ctaCanvas"></canvas>
+
+  <div class="cta-content">
+    <div class="cta-label">Ready to simulate?</div>
+    <h2 class="cta-title">Start Simulating<br>Real Networks</h2>
+    <p class="cta-sub">Experience the future of network education and research. Build topologies, run algorithms, and understand routing like never before.</p>
+    <button class="btn-launch">⬡ Launch Simulator</button>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">⬡ Network Packet Simulator</div>
+  <div class="footer-copy">Built with precision · Graph Algorithms + Real-Time Simulation</div>
+  <div class="footer-copy">© 2025 NPS Project</div>
+</footer>
+
+<script>
+// Cursor
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+
+document.addEventListener('mousemove', e => {
+  mouseX = e.clientX; mouseY = e.clientY;
+  cursor.style.left = mouseX - 6 + 'px';
+  cursor.style.top = mouseY - 6 + 'px';
+});
+
+function animateRing() {
+  ringX += (mouseX - ringX - 20) * 0.12;
+  ringY += (mouseY - ringY - 20) * 0.12;
+  ring.style.left = ringX + 'px';
+  ring.style.top = ringY + 'px';
+  requestAnimationFrame(animateRing);
+}
+animateRing();
+
+document.querySelectorAll('button, a, .feature-card, .team-card').forEach(el => {
+  el.addEventListener('mouseenter', () => { ring.style.transform = 'scale(1.8)'; ring.style.borderColor = 'rgba(139,92,246,0.6)'; });
+  el.addEventListener('mouseleave', () => { ring.style.transform = 'scale(1)'; ring.style.borderColor = 'rgba(56,189,248,0.4)'; });
+});
+
+// Progress bar
+const pb = document.getElementById('progressBar');
+window.addEventListener('scroll', () => {
+  const scrolled = window.scrollY;
+  const total = document.body.scrollHeight - window.innerHeight;
+  pb.style.width = (scrolled / total * 100) + '%';
+});
+
+// Scroll reveal
+const reveals = document.querySelectorAll('.reveal');
+const revealObs = new IntersectionObserver((entries) => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), i * 80);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+reveals.forEach(r => revealObs.observe(r));
+
+// Feature card mouse glow
+document.querySelectorAll('.feature-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const rect = card.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width * 100) + '%';
+    const y = ((e.clientY - rect.top) / rect.height * 100) + '%';
+    card.style.setProperty('--mx', x);
+    card.style.setProperty('--my', y);
+  });
+});
+
+// Hero Network Canvas
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+const nodes = [];
+const packets = [];
+
+for (let i = 0; i < 20; i++) {
+  nodes.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: (Math.random() - 0.5) * 0.3,
+    r: Math.random() * 3 + 2,
+    color: Math.random() > 0.5 ? '#0ea5e9' : '#8b5cf6'
+  });
+}
+
+for (let i = 0; i < 5; i++) {
+  const from = Math.floor(Math.random() * nodes.length);
+  const to = Math.floor(Math.random() * nodes.length);
+  packets.push({ from, to, t: Math.random(), speed: 0.003 + Math.random() * 0.005 });
+}
+
+function drawNetwork() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // connections
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const dx = nodes[i].x - nodes[j].x;
+      const dy = nodes[i].y - nodes[j].y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 200) {
+        const alpha = (1 - dist/200) * 0.25;
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(14,165,233,${alpha})`;
+        ctx.lineWidth = 0.8;
+        ctx.moveTo(nodes[i].x, nodes[i].y);
+        ctx.lineTo(nodes[j].x, nodes[j].y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // nodes
+  nodes.forEach(n => {
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+    ctx.fillStyle = n.color;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = n.color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    n.x += n.vx; n.y += n.vy;
+    if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+    if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+  });
+
+  // packets
+  packets.forEach(p => {
+    const fn = nodes[p.from], tn = nodes[p.to];
+    const x = fn.x + (tn.x - fn.x) * p.t;
+    const y = fn.y + (tn.y - fn.y) * p.t;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#22d3ee';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#22d3ee';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    p.t += p.speed;
+    if (p.t > 1) {
+      p.t = 0;
+      p.from = Math.floor(Math.random() * nodes.length);
+      p.to = Math.floor(Math.random() * nodes.length);
+    }
+  });
+
+  requestAnimationFrame(drawNetwork);
+}
+drawNetwork();
+
+// CTA Canvas
+const ctaCanvas = document.getElementById('ctaCanvas');
+const ctaCtx = ctaCanvas.getContext('2d');
+
+function resizeCTA() {
+  ctaCanvas.width = ctaCanvas.offsetWidth;
+  ctaCanvas.height = ctaCanvas.offsetHeight;
+}
+resizeCTA();
+
+const ctaNodes = [];
+for (let i = 0; i < 30; i++) {
+  ctaNodes.push({
+    x: Math.random() * ctaCanvas.width,
+    y: Math.random() * ctaCanvas.height,
+    vx: (Math.random() - 0.5) * 0.4,
+    vy: (Math.random() - 0.5) * 0.4,
+    r: Math.random() * 2 + 1,
+    color: ['#8b5cf6','#0ea5e9','#22d3ee'][Math.floor(Math.random()*3)]
+  });
+}
+
+function drawCTA() {
+  ctaCtx.clearRect(0, 0, ctaCanvas.width, ctaCanvas.height);
+  for (let i = 0; i < ctaNodes.length; i++) {
+    for (let j = i+1; j < ctaNodes.length; j++) {
+      const dx = ctaNodes[i].x - ctaNodes[j].x, dy = ctaNodes[i].y - ctaNodes[j].y;
+      const d = Math.sqrt(dx*dx+dy*dy);
+      if (d < 150) {
+        const a = (1 - d/150) * 0.3;
+        ctaCtx.beginPath();
+        ctaCtx.strokeStyle = `rgba(139,92,246,${a})`;
+        ctaCtx.lineWidth = 0.8;
+        ctaCtx.moveTo(ctaNodes[i].x, ctaNodes[i].y);
+        ctaCtx.lineTo(ctaNodes[j].x, ctaNodes[j].y);
+        ctaCtx.stroke();
+      }
+    }
+  }
+  ctaNodes.forEach(n => {
+    ctaCtx.beginPath(); ctaCtx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+    ctaCtx.fillStyle = n.color; ctaCtx.shadowBlur = 10; ctaCtx.shadowColor = n.color;
+    ctaCtx.fill(); ctaCtx.shadowBlur = 0;
+    n.x += n.vx; n.y += n.vy;
+    if (n.x < 0 || n.x > ctaCanvas.width) n.vx *= -1;
+    if (n.y < 0 || n.y > ctaCanvas.height) n.vy *= -1;
+  });
+  requestAnimationFrame(drawCTA);
+}
+drawCTA();
+
+// Drag scroll for steps
+const track = document.getElementById('stepsTrack');
+let isDown = false, startX, scrollLeft;
+track.addEventListener('mousedown', e => { isDown = true; track.style.cursor = 'grabbing'; startX = e.pageX - track.offsetLeft; scrollLeft = track.scrollLeft; });
+track.addEventListener('mouseleave', () => { isDown = false; track.style.cursor = 'grab'; });
+track.addEventListener('mouseup', () => { isDown = false; track.style.cursor = 'grab'; });
+track.addEventListener('mousemove', e => { if (!isDown) return; e.preventDefault(); const x = e.pageX - track.offsetLeft; track.scrollLeft = scrollLeft - (x - startX) * 1.5; });
+
+// Counter animation for stats
+const statNums = document.querySelectorAll('.stat-num');
+const statObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.transform = 'scale(1.1)';
+      setTimeout(() => e.target.style.transform = 'scale(1)', 200);
+    }
+  });
+}, { threshold: 0.5 });
+statNums.forEach(s => statObs.observe(s));
+</script>
+</body>
+</html>

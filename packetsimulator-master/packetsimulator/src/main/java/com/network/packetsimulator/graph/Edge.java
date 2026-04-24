@@ -13,7 +13,7 @@ public class Edge {
         return to;
     }
 
-    public int getWeight() {
-        return (int) weight;
+    public double getWeight() {
+        return weight;
     }
 }

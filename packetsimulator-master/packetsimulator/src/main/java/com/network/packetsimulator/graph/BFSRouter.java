@@ -49,7 +49,7 @@ public class BFSRouter {
             step = parent.get(step);
         }
 
-        if (!path.get(0).equals(source)) {
+        if (path.isEmpty() || !path.get(0).equals(source)) {
             return new ArrayList<>();
         }
 

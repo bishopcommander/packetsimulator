@@ -13,59 +13,67 @@ const data = {
 
 // graph options
 const options = {
-
     nodes: {
         shape: "dot",
-        size: 18,
-        borderWidth: 1,
-        shadow:false,
+        size: 20,
+        borderWidth: 2,
         font: {
-            size: 16,
-            color: "#ffffff"
+            size: 14,
+            color: "#ffffff",
+            face: "Inter"
         },
-        color:{
-            background:"#6c8ef5",
-            border:"#3b5bdb"
+        color: {
+            background: "#020617",
+            border: "#00e5ff",
+            highlight: {
+                background: "#00e5ff",
+                border: "#ffffff"
+            },
+            hover: {
+                background: "#00e5ff",
+                border: "#ffffff"
+            }
         }
     },
-
     edges: {
         arrows: "to",
-        smooth:false,
-        font: {
-            align: "middle",
-            color: "#ffffff"
-        }
-    },
-
-    physics:{
-        enabled:true,
-        stabilization:{
-            iterations:100
+        smooth: false,
+        width: 1.5,
+        color: {
+            color: "rgba(255, 255, 255, 0.2)",
+            highlight: "#00e5ff",
+            hover: "#00e5ff"
         },
-        barnesHut:{
-            gravitationalConstant:-500,
-            centralGravity:0.2,
-            springLength:100,
-            springConstant:0.04,
-            damping:0.6
+        font: {
+            align: "top",
+            color: "#00e5ff",
+            size: 12,
+            face: "Space Mono",
+            strokeWidth: 0
         }
     },
-
-    interaction:{
-        dragNodes:true,
-        dragView:true,
-        zoomView:true,
-        hover:false,
-        hideEdgesOnDrag:true
+    physics: {
+        enabled: true,
+        stabilization: { iterations: 100 },
+        barnesHut: {
+            gravitationalConstant: -2000,
+            centralGravity: 0.3,
+            springLength: 120,
+            springConstant: 0.04,
+            damping: 0.09
+        }
+    },
+    interaction: {
+        dragNodes: true,
+        dragView: true,
+        zoomView: true,
+        hover: true
     }
-
 };
 
 // create network
 const network = new vis.Network(container, data, options);
-
-network.setSize("100%", "500px");
+network.setSize("100%", "100%");
 
 network.once("stabilizationIterationsDone", function () {
     network.setOptions({ physics: false });
@@ -75,179 +83,78 @@ network.on("dragStart", function () {
     network.setOptions({ physics: false });
 });
 
-// add node visually
-function drawNode(node){
-
-    nodes.add({
-        id: node,
-        label: node
-    });
-
-    network.focus(node,{
-        scale:1.3,
-        animation:true
-    });
-
-    network.fit({
-        animation:false
-    });
+function drawNode(node) {
+    nodes.add({ id: node, label: node });
+    network.fit();
 }
 
-// ✅ UPDATED: add edge WITH WEIGHT
 function drawEdge(from, to, weight) {
-
     edges.add({
         from: from,
         to: to,
-        label: weight.toString(),   // show weight
-        weight: parseFloat(weight)  // store weight
+        label: weight.toString(),
+        weight: parseFloat(weight)
     });
-
-    network.fit({
-        animation:true
-    });
+    network.fit();
 }
 
 // animation state
 let packetAnimation = null;
-let glowingEdge = null;
-let flashingNode = null;
+let activePath = null;
 
-// packet animation
-function animatePacket(route){
-
-    if(!route || route.length < 2) return;
+function animatePacket(route) {
+    if (!route || route.length < 2) return;
 
     let hopIndex = 0;
     let progress = 0;
+    activePath = route;
 
-    function move(){
-
-        if(hopIndex >= route.length - 1){
-
+    function move() {
+        if (hopIndex >= route.length - 1) {
             packetAnimation = null;
-            glowingEdge = null;
-
-            // 🔥 FINAL PATH HIGHLIGHT
-            edges.update(
-                edges.get().map(e => ({
-                    ...e,
-                    color: { color: "#374151" } // reset all edges
-                }))
-            );
-
+            // Highlight final path in solid blue
+            edges.update(edges.get().map(e => ({ ...e, color: { color: "#e5e7eb" }, width: 1.5 })));
             for (let i = 0; i < route.length - 1; i++) {
-
-                let from = route[i];
-                let to = route[i + 1];
-
-                let edge = edges.get().find(e =>
-                    (e.from === from && e.to === to) ||
-                    (e.from === to && e.to === from)
-                );
-
-                if (edge) {
-                    edges.update({
-                        id: edge.id,
-                        color: { color: "#22c55e" } // GREEN PATH
-                    });
-                }
+                let edge = edges.get().find(e => (e.from === route[i] && e.to === route[i+1]) || (e.from === route[i+1] && e.to === route[i]));
+                if (edge) edges.update({ id: edge.id, color: { color: "#2563eb" }, width: 3 });
             }
-
             network.redraw();
             return;
         }
 
         let from = route[hopIndex];
         let to = route[hopIndex + 1];
-
-        glowingEdge = {from: from, to: to};
-
-        let positions = network.getPositions([from,to]);
-
+        let positions = network.getPositions([from, to]);
         let start = positions[from];
         let end = positions[to];
 
-        progress += 0.02;
-
-        let x = start.x + (end.x - start.x) * progress;
-        let y = start.y + (end.y - start.y) * progress;
-
-        packetAnimation = {x:x,y:y};
+        progress += 0.04;
+        packetAnimation = {
+            x: start.x + (end.x - start.x) * progress,
+            y: start.y + (end.y - start.y) * progress
+        };
 
         network.redraw();
 
-        if(progress >= 1){
-
-            flashingNode = to;
-
-            setTimeout(()=>{
-                flashingNode = null;
-                network.redraw();
-            },400);
-
+        if (progress >= 1) {
             progress = 0;
             hopIndex++;
-
-            setTimeout(move,1200);
-
-        }else{
+            setTimeout(move, 200);
+        } else {
             requestAnimationFrame(move);
         }
-
     }
-
     move();
 }
 
-// draw visual effects
-network.on("afterDrawing", function(ctx){
-
-    // glowing edge
-    if(glowingEdge){
-
-        let positions = network.getPositions([glowingEdge.from, glowingEdge.to]);
-
-        let start = positions[glowingEdge.from];
-        let end = positions[glowingEdge.to];
-
+network.on("afterDrawing", function (ctx) {
+    if (packetAnimation) {
         ctx.beginPath();
-        ctx.moveTo(start.x,start.y);
-        ctx.lineTo(end.x,end.y);
-
-        ctx.strokeStyle = "#00bfff";
-        ctx.lineWidth = 5;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "#00bfff";
-
-        ctx.stroke();
-
-        ctx.shadowBlur = 0;
-    }
-
-    // packet
-    if(packetAnimation){
-
-        ctx.beginPath();
-        ctx.arc(packetAnimation.x, packetAnimation.y, 10, 0, 2*Math.PI);
-        ctx.fillStyle = "#ff9900";
+        ctx.arc(packetAnimation.x, packetAnimation.y, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = "#2563eb";
         ctx.fill();
-
-        ctx.font = "14px Arial";
-        ctx.fillText("📦", packetAnimation.x - 6, packetAnimation.y + 5);
-    }
-
-    // node flash
-    if(flashingNode){
-
-        let pos = network.getPositions([flashingNode])[flashingNode];
-
-        ctx.beginPath();
-        ctx.arc(pos.x,pos.y,22,0,2*Math.PI);
-
-        ctx.strokeStyle = "#00ff88";
-        ctx.lineWidth = 4;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
         ctx.stroke();
     }
-
 });

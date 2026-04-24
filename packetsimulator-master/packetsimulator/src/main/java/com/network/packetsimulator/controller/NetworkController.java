@@ -33,6 +33,12 @@ public class NetworkController {
         return "Edge added between " + from + " and " + to;
     }
 
+    @PostMapping("/clearGraph")
+    public String clearGraph() {
+        graph = new Graph();
+        return "Graph cleared on backend";
+    }
+
     @GetMapping("/sendPacket")
     public List<String> sendPacket(
             @RequestParam String source,

@@ -153,7 +153,9 @@ async function sendPacket() {
         event: "SIMULATION_END"
     });
 }
-function clearGraph() {
+async function clearGraph() {
+    // clear backend graph
+    await fetch("/api/clearGraph", { method: "POST" });
 
     // clear visual graph
     nodes.clear();

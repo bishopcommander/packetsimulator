@@ -21,6 +21,11 @@ public class PacketService {
         }
 
         List<String> result = new ArrayList<>();
+        if (path.isEmpty()) {
+            result.add("Error: No path found from " + source + " to " + destination);
+            return result;
+        }
+
         Random random = new Random();
 
         for (String node : path) {
